@@ -50,8 +50,12 @@ classdef DifferentialDrive < simiam.robot.dynamics.Dynamics
             L = obj.wheel_base_length;
             
             %% START CODE BLOCK %%
-            vel_r = 0;
-            vel_l = 0;
+            wheel_vel_avg = v/R; % average wheel angular velocity
+            lin_vel_diff = w*L; % difference in linear velocity between wheels
+            ang_vel_diff = lin_vel_diff / R; % difference in angular velocity between wheels 
+            
+            vel_r = wheel_vel_avg + ang_vel_diff/2;
+            vel_l = wheel_vel_avg - ang_vel_diff/2;
             %% END CODE BLOCK %%
         end
         

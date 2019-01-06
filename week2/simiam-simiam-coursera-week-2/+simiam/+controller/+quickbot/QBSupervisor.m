@@ -171,11 +171,13 @@ classdef QBSupervisor < simiam.controller.Supervisor
             m_per_tick = (2*pi*R)/obj.robot.encoders(1).ticks_per_rev;
             
             %% START CODE BLOCK %%
+            right_wheel_dist = m_per_tick * (right_ticks-prev_right_ticks);
+            left_wheel_dist = m_per_tick * (left_ticks-prev_left_ticks);
+            robot_dist = (right_wheel_dist+left_wheel_dist) / 2;
             
-            x_dt = 0;
-            y_dt = 0;
-            theta_dt = 0;
-            
+            x_dt = robot_dist * cos(theta);
+            y_dt = robot_dist * sin(theta);
+            theta_dt = (right_wheel_dist-left_wheel_dist) / L;
             %% END CODE BLOCK %%
             
             theta_new = theta + theta_dt;

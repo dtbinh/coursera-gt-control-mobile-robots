@@ -193,10 +193,13 @@ classdef QuickBot < simiam.robot.Robot
             ir_array_values = obj.ir_array.get_range();
             
             %% START CODE BLOCK %%
+            ir_voltages = ir_array_values / 500;
             
-            ir_voltages = ir_array_values;
-            coeff = [0 0 0 0 0];
-            
+            % ir_voltages_from_table = [2.75, 2.35, 2.05, 1.75, 1.55, 1.4, 1.275, 1.075, .925, .805, .725, .65, .5, .4]
+            % ir_distances_from_table = [.04, .05, .06, .07, .08, .09, .1, .12, .14, .16, .18, .2, .25, .3]
+            % coeff = polyfit(ir_voltages_from_table, ir_distances_from_table, 5)
+            % hard coded per instructions
+            coeff = [-0.0182  0.1690  -0.6264  1.1853  -1.2104  0.6293];
             %% END CODE BLOCK %%
             
             ir_distances = polyval(coeff, ir_voltages);
