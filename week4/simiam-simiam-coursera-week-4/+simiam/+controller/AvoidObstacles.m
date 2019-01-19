@@ -77,13 +77,14 @@ classdef AvoidObstacles < simiam.controller.Controller
             % Compute the heading vector
             
             n_sensors = length(robot.ir_array);
-            sensor_gains = [0 0 0 0 0];
-            u_i = zeros(2,5);
-            u_ao = sum(u_i,2);
+            sensor_gains = [6 2 1 2 6];
+            u_i = ir_distances_wf - [x; y];
+            u_i_weighted = u_i .* sensor_gains;
+            u_ao = sum(u_i_weighted,2);
             
             % Compute the heading and error for the PID controller
-            theta_ao = 0;
-            e_k = 0;
+            theta_ao = atan2(u_ao(2),u_ao(1));
+            e_k = theta_ao - theta;
             e_k = atan2(sin(e_k),cos(e_k));
             
             %% END CODE BLOCK %%
@@ -134,16 +135,17 @@ classdef AvoidObstacles < simiam.controller.Controller
                 y_s = obj.sensor_placement(2,i);
                 theta_s = obj.sensor_placement(3,i);
                 
-                R = obj.get_transformation_matrix(0,0,0);
-                ir_distances_rf(:,i) = zeros(3,1);
+                R = obj.get_transformation_matrix(x_s,y_s,theta_s);
+                sensor_dist_vec = [ir_distances(i); 0; 1];
+                ir_distances_rf(:,i) = R * sensor_dist_vec;
             end
             
             % Apply the transformation to world frame.
             
             [x,y,theta] = state_estimate.unpack();
             
-            R = obj.get_transformation_matrix(0,0,0);
-            ir_distances_wf = zeros(3,5);
+            R = obj.get_transformation_matrix(x,y,theta);
+            ir_distances_wf = R * ir_distances_rf;
             
             %% END CODE BLOCK %%
             
@@ -153,7 +155,9 @@ classdef AvoidObstacles < simiam.controller.Controller
         
         function R = get_transformation_matrix(obj, x, y, theta)
             %% START CODE BLOCK %%
-            R = zeros(3,3);
+            R = [ cos(theta) -sin(theta) x; 
+                  sin(theta)  cos(theta) y;
+                  0           0          1; ];
             %% END CODE BLOCK %%
         end
         
