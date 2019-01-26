@@ -73,8 +73,10 @@ classdef AvoidObstacles < simiam.controller.Controller
             e_D = (e_k-obj.e_k_1)/dt;
               
             % PID control on w
-            v = inputs.v;
             w = obj.Kp*e_P + obj.Ki*e_I + obj.Kd*e_D;
+            v = inputs.v;
+            v = obj.scale_v_consider_w(v, w);
+            v = obj.scale_v_consider_ir_dist(v, ir_distances);
             
             % Save errors for next time step
             obj.E_k = e_I;
@@ -83,7 +85,7 @@ classdef AvoidObstacles < simiam.controller.Controller
             % plot  
             obj.p.plot_2d_ref(dt, theta, theta_ao, 'g');
                         
-%             fprintf('(v,w) = (%0.4g,%0.4g)\n', v,w);
+             fprintf('(v,w) = (%0.4g,%0.4g)\n', v,w);
 
             outputs.v = v;
             outputs.w = w;
@@ -132,6 +134,27 @@ classdef AvoidObstacles < simiam.controller.Controller
             % Reset accumulated and previous error
             obj.E_k = 0;
             obj.e_k_1 = 0;
+        end
+        
+        function v_adj = scale_v_consider_w(obj, v, w)
+            % Adjust linear velocity based on angular velocity. Want to go
+            % slower the more we are turning.
+            turn_param = 1;
+            
+            % v=v for w = 0, v decreases as w increases
+            scale = 1 / (1 + turn_param*abs(w)); 
+            v_adj = scale * v;
+        end
+        
+        function v_adj = scale_v_consider_ir_dist(obj, v, ir_distances)
+            % Adjust linear velocity based on distance to obstacles. Want to
+            % slow down as we approach obstacles.
+            d_max = .3;
+            
+            % If far from goal then v=v, as distance to obstacles decreases
+            % v decreases.
+            dist_avg = mean(ir_distances);
+            v_adj = (dist_avg/d_max) * v;
         end
         
     end

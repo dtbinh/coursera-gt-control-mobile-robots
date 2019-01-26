@@ -73,7 +73,12 @@ classdef AOandGTG < simiam.controller.Controller
             %% START CODE BLOCK %%
             
             % 3. Blend the two vectors
-            u_ao_gtg = zeros(2,1);
+            avoid_weight = .65; % must be between 0 and 1
+            
+            u_ao_n = u_ao / norm(u_ao);
+            u_gtg_n = u_gtg / norm(u_gtg);
+            
+            u_ao_gtg = avoid_weight*u_ao_n + (1-avoid_weight)*u_gtg_n;
             
             %% END CODE BLOCK %%
             

@@ -115,15 +115,25 @@ classdef QBSupervisor < simiam.controller.Supervisor
                 % blending controller as the current controller until the
                 % robot arrives at the goal.
                 
-                if(obj.check_event('at_goal'))
+                if obj.check_event('at_goal')
                     obj.switch_to_state('stop');
-                else
+                elseif obj.check_event('unsafe')
+                    obj.switch_to_state('avoid_obstacles');
+                elseif obj.check_event('at_obstacle')
                     obj.switch_to_state('ao_and_gtg');
-                end                
+                elseif obj.check_event('obstacle_cleared')
+                    obj.switch_to_state('go_to_goal');
+                end              
             else
                 %% START CODE BLOCK %%
                 
-                obj.switch_to_state('stop');
+                if obj.check_event('at_goal')
+                    obj.switch_to_state('stop');
+                elseif obj.check_event('at_obstacle')
+                    obj.switch_to_state('avoid_obstacles');
+                elseif obj.check_event('obstacle_cleared')
+                    obj.switch_to_state('go_to_goal');
+                end
                 
                 %% END CODE BLOCK %%
             end

@@ -69,7 +69,6 @@ classdef GoToGoal < simiam.controller.Controller
             [x, y, theta] = state_estimate.unpack();
             
             % Compute the v,w that will get you to the goal
-            v = inputs.v;
             
             % 1. Calculate the heading (angle) to the goal.
             
@@ -106,6 +105,9 @@ classdef GoToGoal < simiam.controller.Controller
             e_D = (e_k-obj.e_k_1)/dt;    
                   
             w = obj.Kp*e_P + obj.Ki*e_I + obj.Kd*e_D;
+            v = inputs.v;
+            v = obj.scale_v_consider_w(v, w);
+            v = obj.scale_v_consider_goal_dist(v, u_x, u_y);
             
             % 4. Save errors for next time step
             obj.E_k = e_I;
@@ -113,6 +115,7 @@ classdef GoToGoal < simiam.controller.Controller
             
             % plot
             obj.p.plot_2d_ref(dt, atan2(sin(theta),cos(theta)), theta_g, 'r');
+            fprintf('(v,w) = (%0.4g,%0.4g)\n', v,w);
             
             outputs = obj.outputs;  % make a copy of the output struct
             outputs.v = v;
@@ -123,6 +126,31 @@ classdef GoToGoal < simiam.controller.Controller
             % Reset accumulated and previous error
             obj.E_k = 0;
             obj.e_k_1 = 0;
+        end
+        
+        function v_adj = scale_v_consider_w(obj, v, w)
+            % Adjust linear velocity based on angular velocity. Want to go
+            % slower the more we are turning.
+            turn_param = 1;
+            
+            % v=v for w = 0, v decreases as w increases
+            scale = 1 / (1 + turn_param*abs(w));
+            v_adj = scale * v;
+        end
+        
+        function v_adj = scale_v_consider_goal_dist(obj, v, u_x, u_y)
+            % Adjust linear velocity based on distance to goal. Want to
+            % slow down as we approach the goal.
+            d_max = .5;
+            
+            % If far from goal then v=v, as distance to goal decreases
+            % v decreases.
+            dist = hypot(u_x, u_y);
+            if dist < d_max
+                v_adj = (dist/d_max) * v;
+            else 
+                v_adj = v;
+            end
         end
     end
     
