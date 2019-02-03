@@ -78,28 +78,40 @@ classdef FollowWall < simiam.controller.Controller
             
             % 1. Select p_2 and p_1, then compute u_fw_t
             if(strcmp(inputs.direction,'right'))
-                % Pick two of the right sensors based on ir_distances
-                p_1 = ir_distances_wf(:,1);
-                p_2 = ir_distances_wf(:,1);
+                % sorts relevant 3 sensors smallest to largest
+                % admittedly this implementation became a bit convoluted.
+                % Problem was tie breaker favors earlier elements which
+                % mean middle is favored over 45 for right - hence flip.
+                % Implementation should be reviewed.
+                [~, indices] = sort(flipud(ir_distances(3:5)));
+                indices = 6 - indices;
+                p_1_index = max(indices(1:2));
+                p_2_index = min(indices(1:2));
             else
-                % Pick two of the left sensors based on ir_distances
-                p_1 = ir_distances_wf(:,5);
-                p_2 = ir_distances_wf(:,5);
+                % sorts relevant 3 sensors smallest to largest
+                [~, indices] = sort(ir_distances(1:3));
+                p_1_index = min(indices(1:2));
+                p_2_index = max(indices(1:2));
             end
+            % smaller index is p1 of the two smallest IR sensor values
             
-            u_fw_t = [0;0];
+            p_1 = ir_distances_wf(:,p_1_index);
+            p_2 = ir_distances_wf(:,p_2_index);
+            
+            u_fw_t = p_2 - p_1;
 
             % 2. Compute u_a, u_p, and u_fw_tp to compute u_fw_p
             
-            u_fw_tp = [0;0];
-            u_a = [0;0];
-            u_p = [0;0];
+            u_fw_tp = u_fw_t / norm(u_fw_t);
+            u_a = p_1;
+            u_p = [x;y];
             
-            u_fw_p = [0;0];
+            u_p_to_a = u_a - u_p;
+            u_fw_p = u_p_to_a - dot(u_p_to_a, u_fw_tp)*u_fw_tp;
             
             % 3. Combine u_fw_tp and u_fw_pp into u_fw;
-            u_fw_pp = [0;0];
-            u_fw = u_fw_tp;
+            u_fw_pp = u_fw_p - d_fw*(u_fw_p/norm(u_fw_p));
+            u_fw = .25*u_fw_tp + .75*u_fw_pp;
             
             %% END CODE BLOCK %%
             
