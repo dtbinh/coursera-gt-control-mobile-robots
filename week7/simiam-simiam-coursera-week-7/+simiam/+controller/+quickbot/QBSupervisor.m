@@ -102,10 +102,10 @@ classdef QBSupervisor < simiam.controller.Supervisor
             obj.v           = 0.15;
             obj.goal        = [1.1, 1.1];
             obj.d_stop      = 0.05;
-            obj.d_at_obs    = 0.10;                
-            obj.d_unsafe    = 0.05;
+            obj.d_at_obs    = 0.125;                
+            obj.d_unsafe    = 0.075;
             
-            obj.d_fw        = 0.15;
+            obj.d_fw        = 0.175;
             obj.fw_direction   = 'left';
             %% END CODE BLOCK %%
                                     
@@ -142,6 +142,21 @@ classdef QBSupervisor < simiam.controller.Supervisor
                     fprintf('stopped at (%0.3f,%0.3f)\n', x, y);
                 end
                 obj.switch_to_state('stop');
+            elseif (obj.check_event('unsafe'))
+                obj.switch_to_state('avoid_obstacles');
+            elseif (obj.check_event('at_obstacle'))
+                if (obj.is_in_state('go_to_goal'))
+                    obj.set_progress_point();
+                end
+                
+                obj.switch_to_state('follow_wall'); 
+            elseif (obj.is_in_state('follow_wall'))
+                if (obj.check_event('progress_made'))
+                    if (strcmp(inputs.direction, 'left') && ~obj.check_event('sliding_left') ...
+                            || strcmp(inputs.direction, 'right') && ~obj.check_event('sliding_right'))
+                        obj.switch_to_state('go_to_goal');
+                    end
+                end
             end
             
             %% END CODE BLOCK %%
@@ -176,12 +191,12 @@ classdef QBSupervisor < simiam.controller.Supervisor
             u_fw = obj.controllers{7}.u_fw;
                         
             %% START CODE BLOCK %%
-            sigma = [0;0];
+            sigma = obj.calc_sigma(u_gtg, u_ao, u_fw);
             %% END CODE BLOCK %%
 
             rc = false;
             if sigma(1) > 0 && sigma(2) > 0
-%                 fprintf('now sliding left\n');
+                %fprintf('now sliding left\n');
                 rc = true;
             end
         end
@@ -199,14 +214,20 @@ classdef QBSupervisor < simiam.controller.Supervisor
             u_fw = obj.controllers{7}.u_fw;
             
             %% START CODE BLOCK
-            sigma = [0;0];
+            sigma = obj.calc_sigma(u_gtg, u_ao, u_fw);
             %% END CODE BLOCK
             
             rc = false;
             if sigma(1) > 0 && sigma(2) > 0
-%                 fprintf('now sliding right\n');
+                %fprintf('now sliding right\n');
                 rc = true;
             end
+        end
+        
+        function sigma = calc_sigma(obj, u_gtg, u_ao, u_fw)
+            controller_matrix = [u_gtg u_ao];
+            
+            sigma = linsolve(controller_matrix, u_fw);
         end
         
         function rc = progress_made(obj, state, robot)
@@ -214,10 +235,11 @@ classdef QBSupervisor < simiam.controller.Supervisor
             % Check for any progress
             [x, y, theta] = obj.state_estimate.unpack();            
             rc = false;
+            epsilon = 0.15;
             
             %% START CODE BLOCK %%
             
-            if (1+1==2)
+            if norm([x - obj.goal(1); y - obj.goal(2)]) < obj.d_prog - epsilon
                 rc = true;
             end
             
